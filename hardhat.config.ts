@@ -12,6 +12,10 @@ import "./tasks/balance";
 import "./tasks/block-number";
 import { HardhatUserConfig } from "hardhat/types";
 
+if (!process.env.ALCHEMY_POLYGON_RPC_URL) {
+  throw new Error("Please set PRIVATE_KEY environment variable");
+}
+
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
@@ -28,6 +32,14 @@ const config: HardhatUserConfig = {
         version: "0.6.12",
       },
     ],
+  },
+  networks: {
+    hardhat: {
+      forking: {
+        url: process.env.ALCHEMY_POLYGON_RPC_URL,
+        blockNumber: 24539564,
+      },
+    },
   },
   mocha: {
     timeout: 200000,

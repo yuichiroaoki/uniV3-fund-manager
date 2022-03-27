@@ -9,8 +9,8 @@ import "./interfaces/INonfungiblePositionManager.sol";
 contract LiquidityExamples is IERC721Receiver {
     address public constant nonfungiblePositionManager =
         0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
-    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
+    address public constant USDC = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
     uint24 public constant poolFee = 3000;
 
     /// @notice Represents the deposit of an NFT
