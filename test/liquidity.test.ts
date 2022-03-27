@@ -40,7 +40,7 @@ describe("LiquidityExamples", () => {
       );
       await Example.deployed();
 
-      await impersonateFundErc20(DAI, USDC_WHALE, owner.address, "1.0");
+      await impersonateFundErc20(USDT, USDC_WHALE, owner.address, "1.0", 6);
       await impersonateFundErc20(USDC, USDC_WHALE, owner.address, "1.0", 6);
     };
   });
@@ -50,6 +50,14 @@ describe("LiquidityExamples", () => {
   });
 
   it("mint new position", async () => {
-    await expect(Example.mintNewPosition()).to.not.reverted;
+    await USDT.approve(Example.address, ethers.BigNumber.from(2000));
+    await USDC.approve(Example.address, ethers.BigNumber.from(2000));
+    await Example.mintNewPosition(
+      USDC.address,
+      USDT.address,
+      500,
+      ethers.BigNumber.from(1000),
+      ethers.BigNumber.from(1000)
+    );
   });
 });
