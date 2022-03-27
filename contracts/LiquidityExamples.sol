@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.7.6;
-pragma abicoder v2;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
+import "./libraries/TickMath.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "./interfaces/INonfungiblePositionManager.sol";
 
@@ -55,7 +54,9 @@ contract LiquidityExamples is IERC721Receiver {
             ,
             ,
 
-        ) = nonfungiblePositionManager.positions(tokenId);
+        ) = INonfungiblePositionManager(nonfungiblePositionManager).positions(
+                tokenId
+            );
         // set the owner and data for position
         deposits[tokenId] = Deposit({
             owner: owner,
@@ -129,8 +130,9 @@ contract LiquidityExamples is IERC721Receiver {
             });
 
         // Note that the pool defined by DAI/USDC and fee tier 0.3% must already be created and initialized in order to mint
-        (tokenId, liquidity, amount0, amount1) = nonfungiblePositionManager
-            .mint(params);
+        (tokenId, liquidity, amount0, amount1) = INonfungiblePositionManager(
+            nonfungiblePositionManager
+        ).mint(params);
 
         // Create a deposit
         _createDeposit(msg.sender, tokenId);
@@ -154,145 +156,6 @@ contract LiquidityExamples is IERC721Receiver {
             );
             uint256 refund1 = amount1ToMint - amount1;
             TransferHelper.safeTransfer(USDC, msg.sender, refund1);
-        }
-    }
-
-    /// @notice Collects the fees associated with provided liquidity
-    /// @dev The contract must hold the erc721 token before it can collect fees
-    /// @param tokenId The id of the erc721 token
-    /// @return amount0 The amount of fees collected in token0
-    /// @return amount1 The amount of fees collected in token1
-    function collectAllFees(uint256 tokenId)
-        external
-        returns (uint256 amount0, uint256 amount1)
-    {
-        // Caller must own the ERC721 position, meaning it must be a deposit
-        // set amount0Max and amount1Max to type(uint128).max to collect all fees
-        // alternatively can set recipient to msg.sender and avoid another transaction in `sendToOwner`
-        INonfungiblePositionManager.CollectParams
-            memory params = INonfungiblePositionManager.CollectParams({
-                tokenId: tokenId,
-                recipient: address(this),
-                amount0Max: type(uint128).max,
-                amount1Max: type(uint128).max
-            });
-
-        (amount0, amount1) = nonfungiblePositionManager.collect(params);
-
-        // send collected fees back to owner
-        _sendToOwner(tokenId, amount0, amount1);
-    }
-
-    /// @notice A function that decreases the current liquidity by half. An example to show how to call the `decreaseLiquidity` function defined in periphery.
-    /// @param tokenId The id of the erc721 token
-    /// @return amount0 The amount received back in token0
-    /// @return amount1 The amount returned back in token1
-    function decreaseLiquidityInHalf(uint256 tokenId)
-        external
-        returns (uint256 amount0, uint256 amount1)
-    {
-        // caller must be the owner of the NFT
-        require(msg.sender == deposits[tokenId].owner, "Not the owner");
-        // get liquidity data for tokenId
-        uint128 liquidity = deposits[tokenId].liquidity;
-        uint128 halfLiquidity = liquidity / 2;
-
-        // amount0Min and amount1Min are price slippage checks
-        // if the amount received after burning is not greater than these minimums, transaction will fail
-        INonfungiblePositionManager.DecreaseLiquidityParams
-            memory params = INonfungiblePositionManager
-                .DecreaseLiquidityParams({
-                    tokenId: tokenId,
-                    liquidity: halfLiquidity,
-                    amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: block.timestamp
-                });
-
-        (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(
-            params
-        );
-
-        // send liquidity back to owner
-        _sendToOwner(tokenId, amount0, amount1);
-    }
-
-    /// @notice Increases liquidity in the current range
-    /// @dev Pool must be initialized already to add liquidity
-    /// @param tokenId The id of the erc721 token
-    /// @param amount0 The amount to add of token0
-    /// @param amount1 The amount to add of token1
-    function increaseLiquidityCurrentRange(
-        uint256 tokenId,
-        uint256 amountAdd0,
-        uint256 amountAdd1
-    )
-        external
-        returns (
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        )
-    {
-        uint256 token0 = deposits[tokenId].token0;
-        uint256 token1 = deposits[tokenId].token1;
-        TransferHelper.safeTransferFrom(
-            token0,
-            msg.sender,
-            address(this),
-            amountAdd0
-        );
-        TransferHelper.safeTransferFrom(
-            token1,
-            msg.sender,
-            address(this),
-            amountAdd1
-        );
-
-        TransferHelper.safeApprove(
-            token0,
-            address(nonfungiblePositionManager),
-            amountAdd0
-        );
-        TransferHelper.safeApprove(
-            token1,
-            address(nonfungiblePositionManager),
-            amountAdd1
-        );
-
-        INonfungiblePositionManager.IncreaseLiquidityParams
-            memory params = INonfungiblePositionManager
-                .IncreaseLiquidityParams({
-                    tokenId: tokenId,
-                    amount0Desired: amountAdd0,
-                    amount1Desired: amountAdd1,
-                    amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: block.timestamp
-                });
-
-        (liquidity, amount0, amount1) = nonfungiblePositionManager
-            .increaseLiquidity(params);
-
-        // Remove allowance and refund in both assets.
-        if (amount0 < amountAdd0) {
-            TransferHelper.safeApprove(
-                token0,
-                address(nonfungiblePositionManager),
-                0
-            );
-            uint256 refund0 = amountAdd0 - amount0;
-            TransferHelper.safeTransfer(token0, msg.sender, refund0);
-        }
-
-        if (amount1 < amount1ToMint) {
-            TransferHelper.safeApprove(
-                token1,
-                address(nonfungiblePositionManager),
-                0
-            );
-            uint256 refund1 = amount1ToMint - amount1;
-            TransferHelper.safeTransfer(token1, msg.sender, refund1);
         }
     }
 
@@ -323,10 +186,7 @@ contract LiquidityExamples is IERC721Receiver {
         // remove information related to tokenId
         delete deposits[tokenId];
         // transfer ownership to original owner
-        nonfungiblePositionManager.safeTransferFrom(
-            address(this),
-            msg.sender,
-            tokenId
-        );
+        INonfungiblePositionManager(nonfungiblePositionManager)
+            .safeTransferFrom(address(this), msg.sender, tokenId);
     }
 }
