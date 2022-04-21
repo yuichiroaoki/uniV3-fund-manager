@@ -12,8 +12,8 @@ import "./tasks/balance";
 import "./tasks/block-number";
 import { HardhatUserConfig } from "hardhat/types";
 
-if (!process.env.ALCHEMY_POLYGON_RPC_URL) {
-  throw new Error("Please set PRIVATE_KEY environment variable");
+if (!process.env.RPC_URL) {
+  throw new Error("Please set RPC_URL environment variable");
 }
 
 const config: HardhatUserConfig = {
@@ -36,7 +36,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.ALCHEMY_POLYGON_RPC_URL,
+        url: process.env.RPC_URL,
         blockNumber: 26420000,
       },
     },
