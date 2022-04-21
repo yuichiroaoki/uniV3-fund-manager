@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import "./libraries/TickMath.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "./interfaces/INonfungiblePositionManager.sol";
+import "./interfaces/ISwapRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "hardhat/console.sol";
@@ -167,6 +168,124 @@ contract LiquidityExamples is IERC721Receiver {
         }
     }
 
+    function mintAndSwap(
+        address token0,
+        address token1,
+        uint24 fee,
+        uint256 amount0ToMint,
+        uint256 amount1ToMint
+    )
+        external
+        returns (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        )
+    {
+        // transfer tokens to contract
+        TransferHelper.safeTransferFrom(
+            token0,
+            msg.sender,
+            address(this),
+            amount0ToMint
+        );
+        TransferHelper.safeTransferFrom(
+            token1,
+            msg.sender,
+            address(this),
+            amount1ToMint
+        );
+
+        require(
+            IERC20(token0).balanceOf(address(this)) == amount0ToMint,
+            "not enough token"
+        );
+        require(
+            IERC20(token1).balanceOf(address(this)) == amount0ToMint,
+            "not enough token"
+        );
+
+        // Approve the position manager
+        TransferHelper.safeApprove(
+            token0,
+            nonfungiblePositionManager,
+            amount0ToMint
+        );
+        TransferHelper.safeApprove(
+            token1,
+            nonfungiblePositionManager,
+            amount1ToMint
+        );
+
+        // The values for tickLower and tickUpper may not work for all tick spacings.
+        // Setting amount0Min and amount1Min to 0 is unsafe.
+        INonfungiblePositionManager.MintParams
+            memory params = INonfungiblePositionManager.MintParams({
+                token0: token0,
+                token1: token1,
+                fee: fee,
+                tickLower: -1000,
+                tickUpper: 1000,
+                amount0Desired: amount0ToMint,
+                amount1Desired: amount1ToMint,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: address(this),
+                deadline: block.timestamp
+            });
+
+        // Note that the pool defined by USDT/USDC and fee tier 0.3% must already be created and initialized in order to mint
+        (tokenId, liquidity, amount0, amount1) = INonfungiblePositionManager(
+            nonfungiblePositionManager
+        ).mint(params);
+        console.log("tokenId", tokenId);
+        console.log("liquidity", liquidity);
+        console.log("amount0", amount0);
+        console.log("amount1", amount1);
+
+        // // Create a deposit
+        _createDeposit(msg.sender, tokenId);
+
+        // Remove allowance and refund in both assets.
+        if (amount0 < amount0ToMint) {
+            TransferHelper.safeApprove(token0, nonfungiblePositionManager, 0);
+            uint256 refund0 = amount0ToMint - amount0;
+            TransferHelper.safeTransfer(token0, msg.sender, refund0);
+        }
+
+        if (amount1 < amount1ToMint) {
+            TransferHelper.safeApprove(token1, nonfungiblePositionManager, 0);
+            uint256 refund1 = amount1ToMint - amount1;
+            TransferHelper.safeTransfer(token1, msg.sender, refund1);
+        }
+    }
+
+    function uniswapV3(
+        address router,
+        uint256 amountIn,
+        address tokenIn,
+        address tokenOut,
+        uint24 fee
+    ) internal returns (uint256 amountOut) {
+        ISwapRouter swapRouter = ISwapRouter(router);
+        approveToken(tokenIn, address(swapRouter), amountIn);
+
+        // single swaps
+        amountOut = swapRouter.exactInputSingle(
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: fee,
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            })
+        );
+    }
+
     /// @notice Transfers funds to owner of NFT
     /// @param tokenId The id of the erc721
     /// @param amount0 The amount of token0
@@ -196,5 +315,13 @@ contract LiquidityExamples is IERC721Receiver {
         // transfer ownership to original owner
         INonfungiblePositionManager(nonfungiblePositionManager)
             .safeTransferFrom(address(this), msg.sender, tokenId);
+    }
+
+    function approveToken(
+        address token,
+        address to,
+        uint256 amountIn
+    ) internal {
+        require(IERC20(token).approve(to, amountIn), "approve failed.");
     }
 }
