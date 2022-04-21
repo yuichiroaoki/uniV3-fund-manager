@@ -12,6 +12,10 @@ import "./tasks/balance";
 import "./tasks/block-number";
 import { HardhatUserConfig } from "hardhat/types";
 
+if (!process.env.RPC_URL) {
+  throw new Error("Please set RPC_URL environment variable");
+}
+
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
@@ -28,6 +32,14 @@ const config: HardhatUserConfig = {
         version: "0.6.12",
       },
     ],
+  },
+  networks: {
+    hardhat: {
+      forking: {
+        url: process.env.RPC_URL,
+        blockNumber: 26420000,
+      },
+    },
   },
   mocha: {
     timeout: 200000,
