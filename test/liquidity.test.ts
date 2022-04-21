@@ -62,4 +62,18 @@ describe("LiquidityExamples", () => {
       )
     ).to.not.reverted;
   });
+
+  it("mint and swap", async () => {
+    await USDT.approve(Example.address, ethers.BigNumber.from(2000));
+    await USDC.approve(Example.address, ethers.BigNumber.from(2000));
+    await impersonateFundErc20(USDT, USDC_WHALE, Example.address, "1.0", 6);
+    await impersonateFundErc20(USDC, USDC_WHALE, Example.address, "1.0", 6);
+    await Example.mintAndSwap(
+      USDC.address,
+      USDT.address,
+      500,
+      ethers.BigNumber.from(1000),
+      ethers.BigNumber.from(1000)
+    );
+  });
 });

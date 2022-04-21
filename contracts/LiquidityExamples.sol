@@ -197,14 +197,14 @@ contract LiquidityExamples is IERC721Receiver {
             amount1ToMint
         );
 
-        require(
-            IERC20(token0).balanceOf(address(this)) == amount0ToMint,
-            "not enough token"
-        );
-        require(
-            IERC20(token1).balanceOf(address(this)) == amount0ToMint,
-            "not enough token"
-        );
+        // require(
+        //     IERC20(token0).balanceOf(address(this)) == amount0ToMint,
+        //     "not enough token"
+        // );
+        // require(
+        //     IERC20(token1).balanceOf(address(this)) == amount0ToMint,
+        //     "not enough token"
+        // );
 
         // Approve the position manager
         TransferHelper.safeApprove(
@@ -246,6 +246,10 @@ contract LiquidityExamples is IERC721Receiver {
 
         // // Create a deposit
         _createDeposit(msg.sender, tokenId);
+
+        address router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+
+        uniswapV3(router, 1000, token0, token1, fee);
 
         // Remove allowance and refund in both assets.
         if (amount0 < amount0ToMint) {
