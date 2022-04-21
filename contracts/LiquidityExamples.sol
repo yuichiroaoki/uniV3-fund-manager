@@ -151,28 +151,20 @@ contract LiquidityExamples is IERC721Receiver {
         console.log("amount1", amount1);
 
         // // Create a deposit
-        // _createDeposit(msg.sender, tokenId);
+        _createDeposit(msg.sender, tokenId);
 
-        // // Remove allowance and refund in both assets.
-        // if (amount0 < amount0ToMint) {
-        //     TransferHelper.safeApprove(
-        //         token0,
-        //         nonfungiblePositionManager,
-        //         0
-        //     );
-        //     uint256 refund0 = amount0ToMint - amount0;
-        //     TransferHelper.safeTransfer(token0, msg.sender, refund0);
-        // }
+        // Remove allowance and refund in both assets.
+        if (amount0 < amount0ToMint) {
+            TransferHelper.safeApprove(token0, nonfungiblePositionManager, 0);
+            uint256 refund0 = amount0ToMint - amount0;
+            TransferHelper.safeTransfer(token0, msg.sender, refund0);
+        }
 
-        // if (amount1 < amount1ToMint) {
-        //     TransferHelper.safeApprove(
-        //         token1,
-        //         nonfungiblePositionManager,
-        //         0
-        //     );
-        //     uint256 refund1 = amount1ToMint - amount1;
-        //     TransferHelper.safeTransfer(token1, msg.sender, refund1);
-        // }
+        if (amount1 < amount1ToMint) {
+            TransferHelper.safeApprove(token1, nonfungiblePositionManager, 0);
+            uint256 refund1 = amount1ToMint - amount1;
+            TransferHelper.safeTransfer(token1, msg.sender, refund1);
+        }
     }
 
     /// @notice Transfers funds to owner of NFT

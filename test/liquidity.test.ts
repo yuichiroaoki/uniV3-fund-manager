@@ -52,12 +52,14 @@ describe("LiquidityExamples", () => {
   it("mint new position", async () => {
     await USDT.approve(Example.address, ethers.BigNumber.from(2000));
     await USDC.approve(Example.address, ethers.BigNumber.from(2000));
-    await Example.mintNewPosition(
-      USDC.address,
-      USDT.address,
-      500,
-      ethers.BigNumber.from(1000),
-      ethers.BigNumber.from(1000)
-    );
+    await expect(
+      Example.mintNewPosition(
+        USDC.address,
+        USDT.address,
+        500,
+        ethers.BigNumber.from(1000),
+        ethers.BigNumber.from(1000)
+      )
+    ).to.not.reverted;
   });
 });
